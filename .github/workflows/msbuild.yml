@@ -1,4 +1,4 @@
-name: Build AVS3 Codec (Windows)
+name: Build AVS3 Encoder (Windows)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         configuration: [Release]
-        platform: [x64, x86]
+        platform: [x64]
 
     steps:
     - name: Checkout
@@ -22,7 +22,7 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # 修复 Windows 下缺少 clock_gettime 和 CLOCK_MONOTONIC 的问题
+    # 修复 Windows 下缺少 clock_gettime 和 CLOCK_MONOTONIC 的问题 (仅需处理 encoder.c)
     - name: Patch POSIX timers for Windows
       run: |
         $compatCode = @'
@@ -44,23 +44,19 @@ jobs:
 
         '@
         
-        $files = @(
-          "av3adecoder/avs3Decoder/src/decoder.c", 
-          "av3adecoder/avs3Encoder/src/encoder.c"
-        )
+        $file = "av3adecoder/avs3Encoder/src/encoder.c"
         
-        foreach ($file in $files) {
-          if (Test-Path $file) {
-            $content = Get-Content $file -Raw
-            if ($content -notmatch "#ifdef _WIN32") {
-              $content = $compatCode + $content
-              Set-Content $file -Value $content
-            }
+        if (Test-Path $file) {
+          $content = Get-Content $file -Raw
+          if ($content -notmatch "#ifdef _WIN32") {
+            $content = $compatCode + $content
+            Set-Content $file -Value $content
           }
         }
 
-    - name: Build AVS3_Codec.sln
-      run: msbuild av3adecoder/AVS3_Codec.sln `
+    # 直接编译 avs3Encoder.vcxproj，跳过 Decoder
+    - name: Build avs3Encoder
+      run: msbuild av3adecoder/avs3Encoder/avs3Encoder.vcxproj `
         /p:Configuration=${{ matrix.configuration }} `
         /p:Platform=${{ matrix.platform }} `
         /m /v:minimal
@@ -70,6 +66,5 @@ jobs:
       with:
         name: avs3-${{ matrix.platform }}-${{ matrix.configuration }}
         path: |
-          av3adecoder/avs3Decoder/${{ matrix.platform == 'x86' && 'Win32' || 'x64' }}/${{ matrix.configuration }}/*.exe
-          av3adecoder/avs3Encoder/${{ matrix.platform == 'x86' && 'Win32' || 'x64' }}/${{ matrix.configuration }}/*.exe
+          av3adecoder/avs3Encoder/x64/${{ matrix.configuration }}/*.exe
         if-no-files-found: error
