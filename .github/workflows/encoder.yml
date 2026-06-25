@@ -64,7 +64,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: avs3-${{ matrix.platform }}-${{ matrix.configuration }}
+        name: avs3-encoder-${{ matrix.platform }}-${{ matrix.configuration }}
         path: |
           av3adecoder/avs3Encoder/x64/${{ matrix.configuration }}/*.exe
         if-no-files-found: error
