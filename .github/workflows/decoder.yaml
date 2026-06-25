@@ -1,0 +1,106 @@
+name: Build AVS3 Decoder (Windows)
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "av3adecoder/avs3Decoder/**"
+      - ".github/workflows/build-avs3-decoder.yml"
+  pull_request:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    # 1. 修复 Windows 下缺少 clock_gettime 的问题 (仅处理 decoder.c)
+    - name: Patch POSIX timers for Windows
+      run: |
+        $compatCode = @'
+        #ifdef _WIN32
+        #include <windows.h>
+        #include <time.h>
+        #ifndef CLOCK_MONOTONIC
+        #define CLOCK_MONOTONIC 0
+        #endif
+        static inline int clock_gettime(int clk, struct timespec* t) {
+            LARGE_INTEGER freq, now;
+            QueryPerformanceFrequency(&freq);
+            QueryPerformanceCounter(&now);
+            t->tv_sec = (long)(now.QuadPart / freq.QuadPart);
+            t->tv_nsec = (long)((now.QuadPart % freq.QuadPart) * 1000000000 / freq.QuadPart);
+            return 0;
+        }
+        #endif
+
+        '@
+        
+        $file = "av3adecoder/avs3Decoder/src/decoder.c"
+        if (Test-Path $file) {
+          $content = Get-Content $file -Raw
+          if ($content -notmatch "#ifdef _WIN32") {
+            $content = $compatCode + $content
+            Set-Content $file -Value $content
+          }
+        }
+
+    # 2. 自动扫描并修复 avs3Decoder.vcxproj 缺失源文件导致的链接错误 (LNK2001)
+    - name: Patch missing source files in vcxproj
+      run: |
+        $vcxprojPath = "av3adecoder/avs3Decoder/avs3Decoder.vcxproj"
+        $xml = [xml](Get-Content $vcxprojPath)
+        $ns = @{ "msb" = "http://schemas.microsoft.com/developer/msbuild/2003" }
+        
+        # 找到包含源文件列表的 ItemGroup
+        $itemGroups = Select-Xml -Xml $xml -XPath "//msb:ItemGroup" -Namespace $ns
+        $targetGroup = $itemGroups[0].Node
+        
+        # 搜索包含缺失函数定义的 .c 文件
+        $missingSymbol = "Avs3DecoderLibParseHeader"
+        $foundFiles = Get-ChildItem -Path "av3adecoder" -Recurse -Filter "*.c" | Select-String -Pattern $missingSymbol -List
+        
+        foreach ($fileMatch in $foundFiles) {
+            $fullPath = $fileMatch.Path
+            # 计算相对于 .vcxproj 文件所在目录的相对路径
+            $vcxprojDir = Split-Path -Parent $vcxprojPath
+            $relativePath = [System.IO.Path]::GetRelativePath($vcxprojDir, $fullPath)
+            
+            # 检查是否已经在工程里
+            $existing = Select-Xml -Xml $xml -XPath "//msb:ClCompile[@Include='$relativePath']" -Namespace $ns
+            if ($existing.Count -eq 0) {
+                Write-Host "Adding missing source file: $relativePath"
+                $clCompile = $xml.CreateElement("ClCompile", "http://schemas.microsoft.com/developer/msbuild/2003")
+                $clCompile.SetAttribute("Include", $relativePath)
+                $targetGroup.AppendChild($clCompile) | Out-Null
+            }
+        }
+        
+        $xml.Save($vcxprojPath)
+
+    # 3. 单独编译 avs3Decoder
+    - name: Build avs3Decoder
+      run: msbuild av3adecoder/avs3Decoder/avs3Decoder.vcxproj `
+        /p:Configuration=${{ matrix.configuration }} `
+        /p:Platform=${{ matrix.platform }} `
+        /m /v:minimal
+
+    # 4. 上传解码器产物
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: avs3-decoder-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: |
+          av3adecoder/avs3Decoder/x64/${{ matrix.configuration }}/*.exe
+        if-no-files-found: error
