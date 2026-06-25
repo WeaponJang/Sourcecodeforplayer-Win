@@ -1,0 +1,40 @@
+name: Build AVS3 Codec (Windows)
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64, x86]   # .sln 里定义的就是 x64 / x86
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    # 直接构建 sln，会同时产出 avs3Encoder.exe 和 avs3Decoder.exe
+    # 不传 PlatformToolset，沿用 .vcxproj 里的 v142（windows-latest 自带 VS2019）
+    - name: Build AVS3_Codec.sln
+      run: msbuild av3adecoder/AVS3_Codec.sln `
+        /p:Configuration=${{ matrix.configuration }} `
+        /p:Platform=${{ matrix.platform }} `
+        /m /v:minimal
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: avs3-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: |
+          av3adecoder/avs3Decoder/${{ matrix.platform == 'x86' && 'Win32' || 'x64' }}/${{ matrix.configuration }}/*.exe
+          av3adecoder/avs3Encoder/${{ matrix.platform == 'x86' && 'Win32' || 'x64' }}/${{ matrix.configuration }}/*.exe
+        if-no-files-found: error
