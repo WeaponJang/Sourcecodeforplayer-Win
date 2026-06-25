@@ -33,6 +33,7 @@
     <ClCompile Include="src\decoder.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="libavs3_common\avs3_dec_lib.h" />
     <ClInclude Include="include\avs3_prot_dec.h" />
     <ClInclude Include="include\avs3_stat_dec.h" />
   </ItemGroup>
