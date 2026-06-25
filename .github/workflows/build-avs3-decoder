@@ -54,7 +54,7 @@ jobs:
         }
 
    
-    # 2. 单独编译 avs3Decoder
+    # 2. 编译 avs3Decoder
     - name: Build avs3Decoder
       run: msbuild av3adecoder/avs3Decoder/avs3Decoder.vcxproj `
         /p:Configuration=${{ matrix.configuration }} `
