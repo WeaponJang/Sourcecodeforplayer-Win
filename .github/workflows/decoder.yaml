@@ -56,47 +56,15 @@ jobs:
           }
         }
 
-    # 2. 自动扫描并修复 avs3Decoder.vcxproj 缺失源文件导致的链接错误 (LNK2001)
-    - name: Patch missing source files in vcxproj
-      run: |
-        $vcxprojPath = "av3adecoder/avs3Decoder/avs3Decoder.vcxproj"
-        $xml = [xml](Get-Content $vcxprojPath)
-        $ns = @{ "msb" = "http://schemas.microsoft.com/developer/msbuild/2003" }
-        
-        # 找到包含源文件列表的 ItemGroup
-        $itemGroups = Select-Xml -Xml $xml -XPath "//msb:ItemGroup" -Namespace $ns
-        $targetGroup = $itemGroups[0].Node
-        
-        # 搜索包含缺失函数定义的 .c 文件
-        $missingSymbol = "Avs3DecoderLibParseHeader"
-        $foundFiles = Get-ChildItem -Path "av3adecoder" -Recurse -Filter "*.c" | Select-String -Pattern $missingSymbol -List
-        
-        foreach ($fileMatch in $foundFiles) {
-            $fullPath = $fileMatch.Path
-            # 计算相对于 .vcxproj 文件所在目录的相对路径
-            $vcxprojDir = Split-Path -Parent $vcxprojPath
-            $relativePath = [System.IO.Path]::GetRelativePath($vcxprojDir, $fullPath)
-            
-            # 检查是否已经在工程里
-            $existing = Select-Xml -Xml $xml -XPath "//msb:ClCompile[@Include='$relativePath']" -Namespace $ns
-            if ($existing.Count -eq 0) {
-                Write-Host "Adding missing source file: $relativePath"
-                $clCompile = $xml.CreateElement("ClCompile", "http://schemas.microsoft.com/developer/msbuild/2003")
-                $clCompile.SetAttribute("Include", $relativePath)
-                $targetGroup.AppendChild($clCompile) | Out-Null
-            }
-        }
-        
-        $xml.Save($vcxprojPath)
-
-    # 3. 单独编译 avs3Decoder
+   
+    # 2. 单独编译 avs3Decoder
     - name: Build avs3Decoder
       run: msbuild av3adecoder/avs3Decoder/avs3Decoder.vcxproj `
         /p:Configuration=${{ matrix.configuration }} `
         /p:Platform=${{ matrix.platform }} `
         /m /v:minimal
 
-    # 4. 上传解码器产物
+    # 3. 上传解码器产物
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
