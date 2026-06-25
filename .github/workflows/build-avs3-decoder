@@ -4,10 +4,7 @@ on:
   push:
     branches: ["master"]
     paths:
-      - "av3adecoder/avs3Decoder/**"
       - ".github/workflows/build-avs3-decoder.yml"
-  pull_request:
-    branches: ["master"]
   workflow_dispatch:
 
 jobs:
