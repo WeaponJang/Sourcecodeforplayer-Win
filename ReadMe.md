@@ -1,3 +1,5 @@
 ### 说明
-使用 GitHub Actions 自动编译编码器和解码器.
-编解码器只有两个参数,即输入输出文件的路径
+
++ 本项目由 nilaoda/Sourcecodeforplayer 项目的代码精简而来
+
+* 具体教程在 项目的 av3adecoder 文件夹里
