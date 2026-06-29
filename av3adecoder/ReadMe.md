@@ -26,22 +26,22 @@ options说明：
     -hoa M：HOA模式，M为HOA阶数
     -mix soundBedType：多声道与对象混合模式，soundBedType为0代表纯对象，1代表声床+对象混合信号，具体声床配置和速率配置见下方示例
     -meta_file filename：元数据文件名，文件名为filename
-示例1：
++ 示例1：
     avs3Encoder -nn_type 0 -bitdepth 16 -mono 44000 48 test.wav test.av3a
     -- 单声道编码，main profile，输入信号位深16bit，采样率48kHz，编码速率44kbps，输入文件test.wav，输出码流文件test.av3a
-示例2：
++ 示例2：
     avs3Encoder -nn_type 1 -bitdepth 16 -stereo 48000 48 test.wav test.av3a
     -- 立体声编码，LC profile，输入信号位深16bit，采样率48kHz，编码速率48kbps，输入文件test.wav，输出码流test.av3a
-示例3：
++ 示例3：
     avs3Encoder -nn_type 1 -bitdepth 16 -mc MC_5_1_0 192000 48 test.wav test.av3a
     -- 多声道编码，格式5.1，LC profile，输入信号位深16bit，采样率48kHz，编码速率192kbps，输入文件test.wav，输出码流test.av3a
-示例4：
++ 示例4：
     avs3Encoder -nn_type 1 -bitdepth 16 -mix 0 10 96000 0 48 test.wav test.av3a
     -- 混合信号编码，纯对象格式，对象数量10，LC profile，输入信号位深16bit，采样率48kHz，每个对象编码速率96kbps，总速率960kbps，输入文件test.wav，输出码流test.av3a
-示例5：(5.1.4 +4 )(总的不大于16)
++ 示例5：(5.1.4 +4 )(总的不大于16)
     avs3Encoder -nn_type 1 -bitdepth 16 -mix 1 MC_5_1_4 384000 4 44000 0 48 test.wav test.av3a
     -- 混合信号编码，声床+对象格式，声床格式5.1.4，对象数量4，LC profile，输入信号位深16bit，采样率48kHz，声床速率384kbps，每个对象速率44kbps，输入文件test.wav，输出码流test.av3a
-示例6：
++ 示例6：
     avs3Encoder -nn_type 1 -bitdepth 16 -hoa 3 256000 48 test.wav test.av3a
     -- HOA编码，阶数为3，LC profile，输入信号位深16bit，采样率48kHz，编码速率256kbps，输入文件test.wav，输出码流文件test.av3a
 
@@ -51,6 +51,6 @@ options说明：
 参数说明：
     inFileName：输入文件名（*.av3a）
     outFileName：输出文件名（*.wav）
-示例：
++ 示例：
     avs3Decoder test.av3a test_dec.wav
     -- 对输入码流test.av3a进行解码，得到解码音频文件test_dec.wav
